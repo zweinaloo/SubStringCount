@@ -497,10 +497,6 @@ public class SubStringCount {
 				}
 			}
 		}
-		/*if(msg.contains("什么")){
-			msgmsg.replaceAll("什么", "");
-			System.err.println(msg);
-		}*/
 		return msg;
 	}
 	
@@ -591,31 +587,4 @@ public class SubStringCount {
 		result=sortMapShow();                                          //排序结果Map
 		
 	}
-	/*public static void main(String[] args) throws IOException {
-		String path = "D:\\Zwei1\\测试&数据\\微博数据\\11.txt";
-//		String pathFloder = "D:\\Zwei1\\测试&数据\\test_data_0614\\01乐清上访村长死亡事件";
-//		String pathFloder = "D:\\Zwei1\\测试&数据\\微博数据\\微博测试0629";
-		String pathFloder = "D:\\Zwei1\\测试&数据\\微博数据\\#王林#";
-		StringBuffer data = null;                                            //数据
-		List<Integer> PointTable = new ArrayList<Integer>();                 //Point指针表
-		List<Integer> LeftTable = new ArrayList<Integer>();                  //左子串表
-		Map<String, Integer> result = new HashMap<String, Integer>();        //处理结果
-		
-		//data = getData(path,"unicode");                                      //得处理数据C
-		data = getDataFloder(pathFloder,"utf-8");
-		
-		buildPointTable(data, PointTable);                                   //建立P表
-		sortPointTable(PointTable,data);                                     //排序P表
-		buildLeftTable(data,PointTable,LeftTable);                           //建立L表
-//		result=statisticalString(data,PointTable, LeftTable, 2);             //得到N元串
-		result=getNToM(data,PointTable,LeftTable,2,4);                      //得到N到M元串
-		
-		
-		substringReduction(result,0.5);                                      //过滤近频子串(存部分改善)
-//		int a=(fileCount*1)/100;
-//		filterShow(result,a);                                                //过滤小于N的词
-		result=sortMapShow(result);                                          //排序结果Map
-		showMap(result,30);                                                  //排序全部结果		
-		
-	}*/
 }
