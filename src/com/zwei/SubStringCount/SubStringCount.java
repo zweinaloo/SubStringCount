@@ -498,15 +498,20 @@ public class SubStringCount {
 				filterList.add(key);
 			}else {
 				if(key.length()==3){
-					String m1 = key.substring(1,3);
+					String m1 = key.substring(1);
 					String m2 = key.substring(0,2);
 					if(stopWordList.contains(m1)||stopWordList.contains(m2)){
 						filterList.add(key);
 					}
 				}
 				if(key.length()==4){
+					String m1 = key.substring(2);
+					String m2 = key.substring(0,2);
 					String m3 =key.substring(1,3);
-					if(stopWordList.contains(m3)||result.containsKey(m3)){
+					if(stopWordList.contains(m1)||stopWordList.contains(m2)){
+						filterList.add(key);
+					}
+					else if(stopWordList.contains(m3)||result.containsKey(m3)){
 						filterList.add(key);
 					}
 				}
