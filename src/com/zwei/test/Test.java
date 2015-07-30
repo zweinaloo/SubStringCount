@@ -26,8 +26,11 @@ public class Test {
 		
 		result=a.getResult();              //得到处理结果           
 		
-		//a.showMap(100);             //测试     输出TOP项
-		System.out.println(result);
+		a.showMap(100);             //测试     输出TOP项
+		//System.out.println(result);
 		//System.out.println(a.getResult());
+		
+		
+		
 	}	
 }

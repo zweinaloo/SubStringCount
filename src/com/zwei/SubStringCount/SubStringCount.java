@@ -40,8 +40,12 @@ public class SubStringCount {
 	private static List<Integer> LeftTable = new ArrayList<Integer>();                  //<左子串表
 	private static Map<String, Integer> result = new HashMap<String, Integer>();        //<处理结果
 	private static HashSet<String> stopWordList = new HashSet<String>();                //停用词词表
+	private static HashSet<String> stopHeadWordList = new HashSet<String>();                //停用词词表
+	private static HashSet<String> stopTailWordList = new HashSet<String>();                //停用词词表
 	private static String pathStop = "D:\\Zwei1\\测试&数据\\停用词表.txt";
-	
+	private static String pathStop1 = "D:\\Zwei1\\测试&数据\\停用词首表.txt";
+	private static String pathStop2 = "D:\\Zwei1\\测试&数据\\停用词尾表.txt"; //待补
+
 	
 	
 	
@@ -111,7 +115,7 @@ public class SubStringCount {
 		String line;
 		while((line=br.readLine())!=null){
 			line=filterAll(line);
-			line=filterStopWord(line,stopWordList);
+			//line=filterStopWord(line,stopWordList);
 			sb.append(line);
 		}
 		br.close();
@@ -146,7 +150,7 @@ public class SubStringCount {
 				String line;
 				while((line=br.readLine())!=null){
 					line=filterAll(line);
-					line=filterStopWord(line,stopWordList);
+					//line=filterStopWord(line,stopWordList);
 					if(line!=null&&line.length()>0){
 						sentenceList.append(line);
 					}
@@ -173,7 +177,7 @@ public class SubStringCount {
 	 * @since V1.0
 	 * @date 2015年7月18日 下午5:27:31
 	 */
-	private static void lodaStopWord() throws IOException{
+	private static void loadStopWord(String pathStop,HashSet<String> stopWordList) throws IOException{
 		File file = new File(pathStop);
 		FileInputStream inputStream = new FileInputStream(file);
 		DataInputStream read = new DataInputStream(inputStream);
@@ -432,7 +436,7 @@ public class SubStringCount {
 										result.remove(x);
 										//break;
 									}
-									else if(Keyvalue<Subvalue*percent*(key.length()/x.length()*1.0)){
+									else if(Keyvalue<Subvalue*percent*(x.length()/((double)key.length()*1.0))){
 										result.remove(key);
 									}
 								}
@@ -448,7 +452,8 @@ public class SubStringCount {
 								count1++;
 								result.remove(x);
 								//break;
-							}else if(Keyvalue<Subvalue*percent*(key.length()/x.length()*1.0)){
+							}
+							else if(Keyvalue<Subvalue*percent*(x.length()/((double)key.length()*1.0))){
 								result.remove(key);
 							}
 						}
@@ -473,12 +478,51 @@ public class SubStringCount {
 	
 	//垃圾串过滤
 	@SuppressWarnings("unused")
-	private static void filterGarbage(){
-		
+	private void filterByRules(){
+		System.out.println("【停用词过滤】");
+		int a=0,b=0,c=0,d=0;
+		List<String> filterList = new ArrayList<String>();
+		//1.移除候选项中的停用词
+		for(String key : stopWordList){
+			if(result.containsKey(key)){
+				result.remove(key);
+			}
+		}
+		for (Map.Entry<String, Integer> entry : result.entrySet()) {
+		//2.根据词长度分割词
+			String key = entry.getKey();                //词
+			String s = key.substring(0,1);				//词首
+			String t = key.substring(key.length()-1);	//词尾
+			//如果词首或词尾是停用词 则移除
+			if(stopHeadWordList.contains(s)||stopHeadWordList.contains(t)&&false){
+				filterList.add(key);
+			}else {
+				if(key.length()==3){
+					String m1 = key.substring(1,3);
+					String m2 = key.substring(0,2);
+					if(stopWordList.contains(m1)||stopWordList.contains(m2)){
+						filterList.add(key);
+					}
+				}
+				if(key.length()==4){
+					String m3 =key.substring(1,3);
+					if(stopWordList.contains(m3)||result.containsKey(m3)){
+						filterList.add(key);
+					}
+				}
+			}
+		}
+		for(String key: filterList){
+			result.remove(key);
+		}
 	}
+				
+	
+	
 
 	/**
 	 * 停用词过滤
+	 * @deprecated
 	 * @brief 停用词过滤
 	 * @param msg 处理文本
 	 * @param stopWordSet 停用词表
@@ -486,7 +530,7 @@ public class SubStringCount {
 	 * @since V1.0
 	 * @date 2015年7月18日 下午8:55:00
 	 */
-	private static String  filterStopWord(String msg,HashSet<String> stopWordSet){
+	private String  filterStopWord(String msg,HashSet<String> stopWordSet){
 		for(String stopWord:stopWordSet){
 			if(msg!=null){
 				try {
@@ -500,6 +544,8 @@ public class SubStringCount {
 		return msg;
 	}
 	
+
+	
 	//文本符号等过滤器
 	/**
 	 * 文本符号等过滤器
@@ -512,7 +558,7 @@ public class SubStringCount {
 	private static String filterAll(String s){
 		String regex_url = "(http\\:\\/\\/.+)"; // 匹配Url的正则表达式
 		String regex_name = "@((?!=@|\\s|\\[|:).)*"; // 匹配微博名的正则表达式
-		String regex_special = "[\\\\ · α.\\:\"'【】#//＂＂<>《》“” ️\\$￥：、……↓（）&()~|！]"; // 匹配特殊字符的正则表达式
+		String regex_special = "[\\\\ · α.\\:\"'【】#//＂＂<>《》“” ️\\$￥：、……↓（）&()~|！\\[\\]]"; // 匹配特殊字符的正则表达式
 		String regex_space = "\\s+";
 		//zwei0624	
 		String regex_emoji = "[\\ud800\\udc00-\\udbff\\udfff\\ud800-\\udfff]";//emjoy表情
@@ -533,7 +579,8 @@ public class SubStringCount {
 		//如果只剩最后一个空格
 		s = s.trim();//保留空格
 		s=s.replaceAll("\\t|\\s+|\\r|\\n|quot;", "");
-		s=s.replaceAll("“|”|，|。|　|，|？| ", "");
+		s=s.replaceAll("“|”|，|。|　|，|？|", "");
+		s=s.replaceAll("[a-zA-Z]?[\\d]?", "");
 		//如果还有内容，就添加到返回值中
 		if (s == null || s.length() <= 3
 				|| s.equals("回复")
@@ -556,7 +603,9 @@ public class SubStringCount {
 	 */
 	public void preparing(Boolean single) throws IOException{
 		System.out.println("【准备步骤】");
-		lodaStopWord();
+		loadStopWord(pathStop,stopWordList);    //加载停用词
+		loadStopWord(pathStop1,stopHeadWordList);    //加载停用词单字
+		loadStopWord(pathStop1,stopTailWordList);    //加载停用词
 		//System.out.println(stopWordList.size());
 		if(data==null){			
 			if(single){
@@ -582,8 +631,10 @@ public class SubStringCount {
 	 */
 	public void filterAndSort(int n){
 		substringReduction(0.5);                                      //过滤近频子串(存部分改善)
-		//int a=(fileCount*1)/100;
 		filterByCount(n);                                                //过滤小于N的词
+		filterByRules();
+		//int a=(fileCount*1)/100;
+		//System.out.println("剩余词"+result.size());
 		result=sortMapShow();                                          //排序结果Map
 		
 	}
