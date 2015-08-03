@@ -14,14 +14,16 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 
-import com.zwei.Util.MapSortDemo;
-import com.zwei.Util.Sort;
+import org.omg.CORBA.IMP_LIMIT;
+
+import com.zwei.utils.FileUtils;
+import com.zwei.utils.MapSortDemo;
+import com.zwei.utils.Sort;
+import com.zwei.utils.Word;
 
 /**
  * 非实体子串统计类
@@ -35,16 +37,28 @@ public class SubStringCount {
 	public static int fileCount=0;                                               //<读入文档数计数
 	private static String path;
 	private static String charset = "utf-8";
-	private StringBuffer data = null;                                            //<输入数据
+	private StringBuffer data = null;     //<输入数据
+	
+	
+	
+	
 	private static List<Integer> PointTable = new ArrayList<Integer>();                 //<Point指针表
 	private static List<Integer> LeftTable = new ArrayList<Integer>();                  //<左子串表
-	private static Map<String, Integer> result = new HashMap<String, Integer>();        //<处理结果
+	private static Map<String, Integer> result = new HashMap<String, Integer>();        //未处理处理结果
+	private static Map<String, Integer> result1 = new HashMap<String, Integer>();         //处理结果
 	private static HashSet<String> stopWordList = new HashSet<String>();                //停用词词表
-	private static HashSet<String> stopHeadWordList = new HashSet<String>();                //停用词词表
-	private static HashSet<String> stopTailWordList = new HashSet<String>();                //停用词词表
+	private static HashSet<String> stopHeadWordList = new HashSet<String>();                //停用词首表
+	private static HashSet<String> stopTailWordList = new HashSet<String>();                //停用词尾表
+	
+	
+	//private static List<Word> IWP = new ArrayList<Word>();                                 
+	private static Map<String, Double> IWP = new HashMap<String, Double>();               //独立词概率
+	private double thresholdIWP = 0.05;                                                   //独立词过滤阈值
+	
 	private static String pathStop = "D:\\Zwei1\\测试&数据\\停用词表.txt";
 	private static String pathStop1 = "D:\\Zwei1\\测试&数据\\停用词首表.txt";
 	private static String pathStop2 = "D:\\Zwei1\\测试&数据\\停用词尾表.txt"; //待补
+	private static String pathStopIWP = "C:\\Users\\JiaHui\\workspace\\SubStringCount\\src\\iwp.txt";  
 
 	
 	
@@ -121,7 +135,7 @@ public class SubStringCount {
 		br.close();
 		read.close();
 		inputStream.close();
-		//System.out.println(sb);
+		System.out.println("【过滤标点符号后文本长度】"+sb.length());
 		this.data = sb;
 	}
 	
@@ -162,8 +176,7 @@ public class SubStringCount {
 		}catch(Exception e){
 			e.printStackTrace();
 		}
-		System.out.println("【停用词过滤】");
-		System.out.println("【总字数】"+sentenceList.length());
+		System.out.println("【过滤标点符号后文本长度】"+sentenceList.length());
 		System.out.println("【总文件数】"+fileCount);
 		this.data = sentenceList;
 	}
@@ -304,17 +317,12 @@ public class SubStringCount {
 		int size=PointTable.size();  //m值
 		String X=data.substring(PointTable.get(0), size).substring(0, N);
 		int count=1;
-		
-		
 		for(int i=0;i<size;i++){		
 			if(LeftTable.get(i)>=N){
 			//X频次+1	
-				//System.out.println(X);
 				count++;
 			}else {
-				//System.out.println(X);
 				result.put(X, count);
-				//System.out.println(i);
                 if(data.substring(PointTable.get(i), size).length()>N){
                 	X=data.substring(PointTable.get(i),size).substring(0,N);
                 	count=1;
@@ -340,10 +348,8 @@ public class SubStringCount {
 			for (Map.Entry<String, Integer> entry : result.entrySet()) {
 				i++;
 				if(i<=top){
-
 					System.out.print(entry.getKey() + ":" + entry.getValue()+"\n");
-				}
-					
+				}	
 			}
 			System.out.println();
 			System.out.println("【剩余总词数】"+result.size());
@@ -395,7 +401,9 @@ public class SubStringCount {
 			Map<String, Integer> result = new HashMap<String, Integer>();    //处理结果
 			for(int i=N;i<=M;i++){
 				result.putAll(stringCount(i));
-			}			
+			}
+			result1=result;
+			System.out.println("【总词数】"+result.size());
 			return result;
 		}else {
 			System.err.println(M+"<"+N);
@@ -436,9 +444,9 @@ public class SubStringCount {
 										result.remove(x);
 										//break;
 									}
-									else if(Keyvalue<Subvalue*percent*(x.length()/((double)key.length()*1.0))){
+									/*else if(Keyvalue<Subvalue*percent*(x.length()/((double)key.length()*1.0))){
 										result.remove(key);
-									}
+									}*/
 								}
 						}
 					}
@@ -453,9 +461,9 @@ public class SubStringCount {
 								result.remove(x);
 								//break;
 							}
-							else if(Keyvalue<Subvalue*percent*(x.length()/((double)key.length()*1.0))){
+							/*else if(Keyvalue<Subvalue*percent*(x.length()/((double)key.length()*1.0))){
 								result.remove(key);
-							}
+							}*/
 						}
 					}
 					
@@ -479,13 +487,15 @@ public class SubStringCount {
 	//垃圾串过滤
 	@SuppressWarnings("unused")
 	private void filterByRules(){
-		System.out.println("【停用词过滤】");
-		int a=0,b=0,c=0,d=0;
+		//System.out.println("【停用词过滤】");
+		int a=0,b=0,c=0,d=0,e=0;
 		List<String> filterList = new ArrayList<String>();
+		int countiwp=0;
 		//1.移除候选项中的停用词
 		for(String key : stopWordList){
 			if(result.containsKey(key)){
 				result.remove(key);
+				e++;
 			}
 		}
 		for (Map.Entry<String, Integer> entry : result.entrySet()) {
@@ -493,18 +503,33 @@ public class SubStringCount {
 			String key = entry.getKey();                //词
 			String s = key.substring(0,1);				//词首
 			String t = key.substring(key.length()-1);	//词尾
-			//如果词首或词尾是停用词 则移除
-			if(stopHeadWordList.contains(s)||stopHeadWordList.contains(t)&&false){
+			String core =key.substring(1);
+			String core1 = key.substring(0,key.length()-1);
+			//如果词首或词尾是停用词 另一部分是核心 则移除
+			//System.out.println(key);
+			if(stopHeadWordList.contains(s)&&stopHeadWordList.contains(t)){
 				filterList.add(key);
-			}else {
-				if(key.length()==3){
+			}
+			else if(stopHeadWordList.contains(t)/*&&result1.containsKey(core1)*/){			
+//				if(result1.get(core1)>2)
+				filterList.add(key);
+			}else if(stopHeadWordList.contains(s)&&result1.containsKey(core)){
+				if(result1.get(core)>2)
+				filterList.add(key);
+			}
+			else {
+				if(key.length()==2){
+					filterByIWP(key, filterList);
+					countiwp++;
+				}
+				else if(key.length()==3){
 					String m1 = key.substring(1);
 					String m2 = key.substring(0,2);
 					if(stopWordList.contains(m1)||stopWordList.contains(m2)){
 						filterList.add(key);
 					}
 				}
-				if(key.length()==4){
+				else if(key.length()==4){
 					String m1 = key.substring(2);
 					String m2 = key.substring(0,2);
 					String m3 =key.substring(1,3);
@@ -515,13 +540,63 @@ public class SubStringCount {
 						filterList.add(key);
 					}
 				}
+				else if(key.length()==5){
+					filterRule1(key,filterList);
+				}
 			}
 		}
 		for(String key: filterList){
 			result.remove(key);
 		}
+		int removeByStop=filterList.size()+e;
+		System.out.println("【根据垃圾串移除"+removeByStop+"个】");
+		System.err.println(countiwp);
 	}
-				
+	
+	
+	//根据IWP独立词概率 过滤词组，若IMP概率大于阈值就过滤掉该词
+	private void filterByIWP(String word,List<String> filterList){
+		String s = word.substring(0,1);
+		String t = word.substring(1);
+		if(!IWP.containsKey(s)){
+			System.err.println(s);
+		}else if(!IWP.containsKey(t)){
+			System.err.println(t);
+		}
+		else {
+			double impA = IWP.get(s);
+			double impB = IWP.get(t);
+			double impValue = impA*impB;
+			if(impValue>thresholdIWP){
+				filterList.add(word);
+			}
+		}
+		
+	}
+	
+	
+	
+	//如果字串字长为5，则分析去除他的词首与词尾后的子串，若子串是由2个高频词组成则过滤掉
+	private void filterRule1(String word,List<String> filterList){
+		String noneHead = word.substring(1);
+		String noneTail = word.substring(0,4);
+		String tmp1 = noneHead.substring(0,2);
+		String tmp2 = noneHead.substring(2);
+		String tmp3 = noneTail.substring(0,2);
+		String tmp4 = noneTail.substring(2);
+		if(result.containsKey(tmp1)&&result.containsKey(tmp2)){
+			filterList.add(word);
+		}else if(result.containsKey(tmp3)&&result.containsKey(tmp4)){
+			filterList.add(word);
+		}	
+
+	}
+	
+	private void filterRule2(String word,List<String> filterList){
+		
+		
+	}
+	
 	
 	
 
@@ -566,17 +641,16 @@ public class SubStringCount {
 		String regex_special = "[\\\\ · α.\\:\"'【】#//＂＂<>《》“” ️\\$￥：、……↓（）&()~|！\\[\\]]"; // 匹配特殊字符的正则表达式
 		String regex_space = "\\s+";
 		//zwei0624	
-		String regex_emoji = "[\\ud800\\udc00-\\udbff\\udfff\\ud800-\\udfff]";//emjoy表情
+		String regex_emoji = "[\\ud83c\\udc00-\\ud83c\\udfff]|[\\ud83d\\udc00-\\ud83d\\udfff]|[\\u2600-\\u27ff]";//emjoy表情
 		String regex_16 ="/x^[0-9a-fA-F]{2}$/";
 		
 		s = s.replaceAll(regex_16, "");
 		//去掉Emoji表情字符
 		s = s.replaceAll(regex_name, "");
-		s = s.replaceAll(regex_emoji, "");
+		//s = s.replaceAll(regex_emoji, " ");
 		// 去掉url
 		s = s.replaceAll(regex_url, "");
-		// 去掉微博名
-		//s = s.replaceAll(regex_name, "");
+
 		// 去掉特殊字符
 		s = s.replaceAll(regex_special, "");
 		//精简空格
@@ -584,7 +658,7 @@ public class SubStringCount {
 		//如果只剩最后一个空格
 		s = s.trim();//保留空格
 		s=s.replaceAll("\\t|\\s+|\\r|\\n|quot;", "");
-		s=s.replaceAll("“|”|，|。|　|，|？|", "");
+		s=s.replaceAll("“|”|，|—|。|　|，|？|,|\\?", "");
 		s=s.replaceAll("[a-zA-Z]?[\\d]?", "");
 		//如果还有内容，就添加到返回值中
 		if (s == null || s.length() <= 3
@@ -608,9 +682,13 @@ public class SubStringCount {
 	 */
 	public void preparing(Boolean single) throws IOException{
 		System.out.println("【准备步骤】");
+		FileUtils utils = new FileUtils();
+		IWP=utils.loadWord(pathStopIWP, "utf-8");     //加载独立词概率
+		
 		loadStopWord(pathStop,stopWordList);    //加载停用词
 		loadStopWord(pathStop1,stopHeadWordList);    //加载停用词单字
 		loadStopWord(pathStop1,stopTailWordList);    //加载停用词
+		
 		//System.out.println(stopWordList.size());
 		if(data==null){			
 			if(single){
@@ -625,7 +703,7 @@ public class SubStringCount {
 		sortPointTable(data,PointTable);                                     //排序P表
 		buildLeftTable(data,PointTable,LeftTable);                           //建立L表
 	}
-
+	
 	/**
 	 * 过滤并排序结果
 	 * @brief 过滤并排序结果
@@ -635,8 +713,8 @@ public class SubStringCount {
 	 * @date 2015年7月18日 下午8:50:14
 	 */
 	public void filterAndSort(int n){
-		substringReduction(0.5);                                      //过滤近频子串(存部分改善)
 		filterByCount(n);                                                //过滤小于N的词
+		substringReduction(0.5);                                      //过滤近频子串(存部分改善)
 		filterByRules();
 		//int a=(fileCount*1)/100;
 		//System.out.println("剩余词"+result.size());
